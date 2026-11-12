@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tableau Slideshow</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background-color: #000;
+    }
+
+    .viz-frame {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      border: none;
+      opacity: 0;
+      z-index: 1;
+      transition: opacity 1s ease-in-out;
+    }
+
+    .viz-frame.active {
+      opacity: 1;
+      z-index: 2;
+    }
+
+    #version {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: #ffffff;
+      font-size: 14px;
+      font-family: sans-serif;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 2px 6px;
+      border-radius: 4px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Two overlapping iframes: one visible, one loading the next view -->
+  <iframe id="iframe1" class="viz-frame"></iframe>
+  <iframe id="iframe2" class="viz-frame"></iframe>
+
+  <div id="version"></div>
+
+  <script>
+    // ===================== EDIT THIS SECTION =====================
+
+    const VERSION = "v1.0.0";            // shown bottom-left; bump it on each change so you can tell the TV has the new version
+    const ROTATE_INTERVAL_SECONDS = 30;  // how long each view stays on screen
+    const FADE_DELAY_MS = 500;           // pause after a view loads before it fades in
+
+    // One line per Tableau view, in the order they should appear.
+    // Format: https://prod-ca-a.online.tableau.com/t/caplynk/views/<workbook>/<sheet>
+    // New team screen: views from the "new team dashboard ff" and "New team ff" workbooks.
+    const reportUrls = [
+      "https://prod-ca-a.online.tableau.com/t/caplynk/views/newteamdashboardff/Dashboard1",
+      "https://prod-ca-a.online.tableau.com/t/caplynk/views/Newteamff/Apps",
+      "https://prod-ca-a.online.tableau.com/t/caplynk/views/Newteamff/OpenerFunded",
+      "https://prod-ca-a.online.tableau.com/t/caplynk/views/Newteamff/CloserFunded",
+      "https://prod-ca-a.online.tableau.com/t/caplynk/views/Newteamff/Past",
+      "https://prod-ca-a.online.tableau.com/t/caplynk/views/Newteamff/Year",
+      "https://prod-ca-a.online.tableau.com/t/caplynk/views/Newteamff/Transfers"
+    ];
+
+    // =================== END OF EDIT SECTION =====================
+
+    document.getElementById("version").textContent = VERSION;
+
+    const iframe1 = document.getElementById("iframe1");
+    const iframe2 = document.getElementById("iframe2");
+
+    let currentIndex = 0;
+    let currentFrame = 1;
+
+    // Adds Tableau's embed options (no toolbar, no viz home) plus a timestamp
+    // so the browser never shows a cached copy of the page.
+    function getUrlWithParams(baseUrl) {
+      const ts = Date.now();
+      return `${baseUrl}?:embed=true&:showVizHome=no&:toolbar=no&:fullscreen=true&_ts=${ts}`;
+    }
+
+    function rotate() {
+      const nextUrl = getUrlWithParams(reportUrls[currentIndex]);
+      const incoming = currentFrame === 1 ? iframe2 : iframe1;
+      const outgoing = currentFrame === 1 ? iframe1 : iframe2;
+
+      // Load the next view in the hidden iframe
+      incoming.src = nextUrl;
+
+      // Once it has loaded, crossfade to it
+      incoming.onload = () => {
+        setTimeout(() => {
+          incoming.classList.add("active");
+          outgoing.classList.remove("active");
+
+          currentFrame = currentFrame === 1 ? 2 : 1;
+          currentIndex = (currentIndex + 1) % reportUrls.length;
+        }, FADE_DELAY_MS);
+      };
+    }
+
+    // Initial load
+    iframe1.src = getUrlWithParams(reportUrls[0]);
+    iframe1.classList.add("active");
+    currentIndex = reportUrls.length > 1 ? 1 : 0;
+
+    // Start rotating
+    setInterval(rotate, ROTATE_INTERVAL_SECONDS * 1000);
+  </script>
+
+</body>
+</html>
